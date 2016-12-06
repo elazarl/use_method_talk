@@ -32,6 +32,7 @@ static struct argp_option options[] = {
 };
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 void *touchcache(void *);
+void *touchcache_infinite(void *);
 
 int main(int argc, char **argv) {
   pthread_t *__attribute__((cleanup(_free))) threads;
@@ -46,9 +47,15 @@ int main(int argc, char **argv) {
          "%'d threads\n",
          ncachelines, times, l3cachesize, nthreads);
   threads = calloc(sizeof(threads[0]), nthreads);
-  for (i = 1; i < nthreads; i++)
-    pthread_create(&threads[i], NULL, touchcache, NULL);
-  touchcache(NULL);
+  if (times == -1) {
+	  for (i = 1; i < nthreads; i++)
+	    pthread_create(&threads[i], NULL, touchcache_infinite, NULL);
+	  touchcache_infinite(NULL);
+  } else {
+	  for (i = 1; i < nthreads; i++)
+	    pthread_create(&threads[i], NULL, touchcache, NULL);
+	  touchcache(NULL);
+  }
   for (i = 1; i < nthreads; i++)
     pthread_join(threads[i], NULL);
 }
@@ -56,14 +63,22 @@ int main(int argc, char **argv) {
 #define IX(x, y) (x * ncachelines + y)
 void *touchcache(__attribute__((unused)) void *_) {
   int i;
-  char *__attribute__((cleanup(_free))) cacheline =
+  volatile char *__attribute__((cleanup(_free))) cacheline =
       malloc((uint64_t)l3cachesize * ncachelines);
   int ntimes = times;
-  if (ntimes == -1)
-    ntimes = INT_MAX;
   while (ntimes > 0)
     for (i = 0; i < ncachelines; i++)
-      cacheline[IX(i, 0)]++, ntimes--;
+      cacheline[IX(i, 0)]=0, ntimes--;
+  return NULL;
+}
+
+void *touchcache_infinite(__attribute__((unused)) void *_) {
+  int i;
+  volatile char *__attribute__((cleanup(_free))) cacheline =
+      malloc((uint64_t)l3cachesize * ncachelines);
+  while (1)
+    for (i = 0; i < ncachelines; i++)
+      cacheline[IX(i, 0)]++;
   return NULL;
 }
 
