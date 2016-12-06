@@ -1,17 +1,6 @@
 #!/bin/bash
 
-highlight() {
-	grep --color '[^ ]*\s*insns per cycle\|$'
-}
-runecho() {
-	echo $@
-	"$@"
-}
-bold=$(tput rev;tput bold)
-normal=$(tput sgr0)
-boldecho() {
-	echo ${bold}$@${normal}
-}
+source ../demo.sh
 
 boldecho "Let's run a simple benchmark that touches the same memory spot"
 runecho perf stat ./cachemiss -c 1 -t 10,000,000 | highlight
