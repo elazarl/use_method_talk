@@ -3,6 +3,10 @@
 TIMES=100,000,000
 source ../demo.sh
 
+highlight() {
+	grep --color '[^ ]*\s*insns per cycle\|$'
+}
+
 boldecho "Let's run a simple benchmark that touches the same memory spot"
 runecho perf stat ./cachemiss -c 1 -t $TIMES |& highlight
 read

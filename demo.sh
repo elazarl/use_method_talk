@@ -1,7 +1,4 @@
 #!/bin/bash
-highlight() {
-	grep --color '[^ ]*\s*insns per cycle\|$'
-}
 runecho() {
 	echo $@
 	"$@"
