@@ -44,3 +44,7 @@ read
 boldecho "Let's see a diff"
 runecho bash -c '~/FlameGraph/difffolded.pl -n sorted_ascii.folded sorted_utf8.folded | ~/FlameGraph/flamegraph.pl > /tmp/diff.svg'
 runecho google-chrome /tmp/diff.svg
+boldecho "But what does strcoll do?"
+read
+runecho google-chrome "http://www.cplusplus.com/reference/cstring/strcoll/"
+
