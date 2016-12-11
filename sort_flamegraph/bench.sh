@@ -5,12 +5,11 @@ source ../demo.sh
 F="$1"
 
 if [ -z "$F" ]; then
-	echo Need a file argument
-	exit 1
+	F=~/linux/tags
 fi
 
 boldecho "Let's run sort on a big file $F, and record perf trace"
-runecho sudo bash -c "time perf record -e cycles:u --call-graph=dwarf -F 99 sort <$F >/dev/null"
+runecho sudo /usr/bin/time -p bash -c "perf record -e cycles:u --call-graph=dwarf -F 99 sort <$F >/dev/null"
 boldecho "Let's see raw stacktraces"
 read
 sudo perf script | head
@@ -35,16 +34,17 @@ runecho bash -c 'sudo perf script | ~/FlameGraph/stackcollapse-perf.pl | ./remov
 runecho bash -c '~/FlameGraph/flamegraph.pl <sorted_utf8.folded > /tmp/utf8.svg'
 runecho google-chrome /tmp/utf8.svg
 read
-boldecho "Run again with LC_ALL=C"
-runecho sudo bash -c "LC_ALL=C time perf record -e cycles:u --call-graph=dwarf -F 99 sort <$F >/dev/null"
+boldecho "But what does strcoll do?"
+read
+runecho google-chrome "http://www.cplusplus.com/reference/cstring/strcoll/"
+boldecho "So it's Unicode! Run again with LC_ALL=C"
+runecho sudo /usr/bin/time -p bash -c "LC_ALL=C perf record -e cycles:u --call-graph=dwarf -F 99 sort <$F >/dev/null"
 runecho bash -c 'sudo perf script | ~/FlameGraph/stackcollapse-perf.pl | ./remove_identical_lines.py sequential_sort > sorted_ascii.folded'
 runecho bash -c '~/FlameGraph/flamegraph.pl < sorted_ascii.folded > /tmp/ascii.svg'
 runecho google-chrome /tmp/ascii.svg
 read
 boldecho "Let's see a diff"
+read
 runecho bash -c '~/FlameGraph/difffolded.pl -n sorted_ascii.folded sorted_utf8.folded | ~/FlameGraph/flamegraph.pl > /tmp/diff.svg'
 runecho google-chrome /tmp/diff.svg
-boldecho "But what does strcoll do?"
-read
-runecho google-chrome "http://www.cplusplus.com/reference/cstring/strcoll/"
 
