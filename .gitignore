@@ -2,3 +2,5 @@ nohup.out
 *.class
 *.swp
 *.swo
+perf.data
+perf.data.old
