@@ -33,6 +33,7 @@ static struct argp_option options[] = {
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 void *touchcache(void *);
 void *touchcache_infinite(void *);
+static inline uint64_t atomic_xadd64(volatile uint64_t *ptr, uint64_t val);
 
 int main(int argc, char **argv) {
   pthread_t *__attribute__((cleanup(_free))) threads;
@@ -48,13 +49,13 @@ int main(int argc, char **argv) {
          ncachelines, times, l3cachesize, nthreads);
   threads = calloc(sizeof(threads[0]), nthreads);
   if (times == -1) {
-	  for (i = 1; i < nthreads; i++)
-	    pthread_create(&threads[i], NULL, touchcache_infinite, NULL);
-	  touchcache_infinite(NULL);
+    for (i = 1; i < nthreads; i++)
+      pthread_create(&threads[i], NULL, touchcache_infinite, NULL);
+    touchcache_infinite(NULL);
   } else {
-	  for (i = 1; i < nthreads; i++)
-	    pthread_create(&threads[i], NULL, touchcache, NULL);
-	  touchcache(NULL);
+    for (i = 1; i < nthreads; i++)
+      pthread_create(&threads[i], NULL, touchcache, NULL);
+    touchcache(NULL);
   }
   for (i = 1; i < nthreads; i++)
     pthread_join(threads[i], NULL);
@@ -68,7 +69,7 @@ void *touchcache(__attribute__((unused)) void *_) {
   int ntimes = times;
   while (ntimes > 0)
     for (i = 0; i < ncachelines; i++)
-      cacheline[IX(i, 0)]=0, ntimes--;
+      cacheline[IX(i, 0)] = 0, ntimes--;
   return NULL;
 }
 
@@ -78,14 +79,8 @@ void *touchcache_infinite(__attribute__((unused)) void *_) {
       malloc((uint64_t)l3cachesize * ncachelines);
   while (1)
     for (i = 0; i < ncachelines; i++)
-      cacheline[IX(i, 0)]++;
+      atomic_xadd64((void *)(cacheline + IX(i, 0)), 1);
   return NULL;
-}
-
-void touch(char *mem, int size) {
-  int i;
-  for (i = 0; i < size; i += L1CACHELINE)
-    mem[i]++;
 }
 
 bool parse_int(struct argp_state *state, int *result, char *arg);
@@ -117,7 +112,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 bool parse_int(struct argp_state *state, int *result, char *_arg) {
   int i;
   int j = 0;
-  char * __attribute__((cleanup(_free))) arg = malloc(strlen(_arg) + 1);
+  char *__attribute__((cleanup(_free))) arg = malloc(strlen(_arg) + 1);
   /* remove commas */
   for (i = 0; i < (int)strlen(_arg); i++)
     if (_arg[i] != ',')
@@ -137,4 +132,9 @@ void _free(void *_p) {
   void **p = _p;
   if (p)
     free(*p);
+}
+
+static inline uint64_t atomic_xadd64(volatile uint64_t *ptr, uint64_t val) {
+  __asm volatile("lock ; xaddq %0, (%1)" : "+r"(val) : "r"(ptr) : "memory");
+  return val;
 }
