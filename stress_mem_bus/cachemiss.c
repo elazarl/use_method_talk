@@ -61,11 +61,11 @@ int main(int argc, char **argv) {
     pthread_join(threads[i], NULL);
 }
 
-#define IX(x, y) (x * ncachelines + y)
+#define IX(x, y) (x * L1CACHELINE + y)
 void *touchcache(__attribute__((unused)) void *_) {
   int i;
   volatile char *__attribute__((cleanup(_free))) cacheline =
-      malloc((uint64_t)l3cachesize * ncachelines);
+      malloc((uint64_t)L1CACHELINE * ncachelines);
   int ntimes = times;
   while (ntimes > 0)
     for (i = 0; i < ncachelines; i++)
@@ -76,7 +76,7 @@ void *touchcache(__attribute__((unused)) void *_) {
 void *touchcache_infinite(__attribute__((unused)) void *_) {
   int i;
   volatile char *__attribute__((cleanup(_free))) cacheline =
-      malloc((uint64_t)l3cachesize * ncachelines);
+      malloc((uint64_t)L1CACHELINE * ncachelines);
   while (1)
     for (i = 0; i < ncachelines; i++)
       atomic_xadd64((void *)(cacheline + IX(i, 0)), 1);
