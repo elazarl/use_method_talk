@@ -14,6 +14,7 @@ int L1CACHELINE = 131072;
 int times = 100 * 1000;
 int ncachelines = 1000;
 int nthreads = 1;
+bool atomic = false;
 
 #define arraysize(x) (sizeof(x) / sizeof(x[0]))
 void _free(void *p);
@@ -28,12 +29,18 @@ static struct argp_option options[] = {
      0},
     {"threads", 'T', "nthreads", 0,
      "How many concurrent threads should touch cache", 0},
+    {"atomic", 'A', NULL, OPTION_ARG_OPTIONAL,
+     "Should I make sure every write is atomic", 0},
     {.name = NULL},
 };
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 void *touchcache(void *);
+void *touchcache_atomic(void *);
 void *touchcache_infinite(void *);
+void *touchcache_infinite_atomic(void *);
 static inline uint64_t atomic_xadd64(volatile uint64_t *ptr, uint64_t val);
+
+typedef void *(*func_t)(void *);
 
 int main(int argc, char **argv) {
   pthread_t *__attribute__((cleanup(_free))) threads;
@@ -48,15 +55,17 @@ int main(int argc, char **argv) {
          "%'d threads\n",
          ncachelines, times, l3cachesize, nthreads);
   threads = calloc(sizeof(threads[0]), nthreads);
-  if (times == -1) {
-    for (i = 1; i < nthreads; i++)
-      pthread_create(&threads[i], NULL, touchcache_infinite, NULL);
-    touchcache_infinite(NULL);
-  } else {
-    for (i = 1; i < nthreads; i++)
-      pthread_create(&threads[i], NULL, touchcache, NULL);
-    touchcache(NULL);
-  }
+  func_t f = touchcache;
+  if (times == -1 && atomic)
+    f = touchcache_infinite_atomic;
+  else if (times == -1)
+    f = touchcache_infinite;
+  else if (atomic)
+    f = touchcache_atomic;
+
+  for (i = 1; i < nthreads; i++)
+    pthread_create(&threads[i], NULL, f, NULL);
+  f(NULL);
   for (i = 1; i < nthreads; i++)
     pthread_join(threads[i], NULL);
 }
@@ -73,7 +82,18 @@ void *touchcache(__attribute__((unused)) void *_) {
   return NULL;
 }
 
-void *touchcache_infinite(__attribute__((unused)) void *_) {
+void *touchcache_atomic(__attribute__((unused)) void *_) {
+  int i;
+  volatile char *__attribute__((cleanup(_free))) cacheline =
+      malloc((uint64_t)L1CACHELINE * ncachelines);
+  int ntimes = times;
+  while (ntimes > 0)
+    for (i = 0; i < ncachelines; i++)
+      atomic_xadd64((void *)(cacheline + IX(i, 0)), 1), ntimes--;
+  return NULL;
+}
+
+void *touchcache_infinite_atomic(__attribute__((unused)) void *_) {
   int i;
   volatile char *__attribute__((cleanup(_free))) cacheline =
       malloc((uint64_t)L1CACHELINE * ncachelines);
@@ -83,6 +103,15 @@ void *touchcache_infinite(__attribute__((unused)) void *_) {
   return NULL;
 }
 
+void *touchcache_infinite(__attribute__((unused)) void *_) {
+  int i;
+  volatile char *__attribute__((cleanup(_free))) cacheline =
+      malloc((uint64_t)L1CACHELINE * ncachelines);
+  while (1)
+    for (i = 0; i < ncachelines; i++)
+      cacheline[IX(i, 0)] = 0;
+  return NULL;
+}
 bool parse_int(struct argp_state *state, int *result, char *arg);
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
@@ -102,6 +131,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
   case 'T':
     if (!parse_int(state, &nthreads, arg))
       return ARGP_ERR_UNKNOWN;
+    break;
+  case 'A':
+    atomic = true;
     break;
   default:
     return ARGP_ERR_UNKNOWN;
