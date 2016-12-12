@@ -11,7 +11,7 @@
 #define S(x) _S(x)
 int l3cachesize = L3CACHESIZE;
 int L1CACHELINE = 131072;
-int times = 100 * 1000;
+int64_t times = 100 * 1000;
 int ncachelines = 1000;
 int nthreads = 1;
 bool atomic = false;
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
                       .doc = "touches ntimes times a memory byte, each time "
                              "from different L3 cache"};
   argp_parse(&argp, argc, argv, 0, 0, NULL);
-  printf("Using %'d cachelines, touching memory %'d times L3 Cache size %'d, "
+  printf("Using %'d cachelines, touching memory %'ld times L3 Cache size %'d, "
          "%'d threads\n",
          ncachelines, times, l3cachesize, nthreads);
   threads = calloc(sizeof(threads[0]), nthreads);
@@ -75,7 +75,7 @@ void *touchcache(__attribute__((unused)) void *_) {
   int i;
   volatile char *__attribute__((cleanup(_free))) cacheline =
       malloc((uint64_t)L1CACHELINE * ncachelines);
-  int ntimes = times;
+  int64_t ntimes = times;
   while (ntimes > 0)
     for (i = 0; i < ncachelines; i++)
       cacheline[IX(i, 0)] = 0, ntimes--;
@@ -86,7 +86,7 @@ void *touchcache_atomic(__attribute__((unused)) void *_) {
   int i;
   volatile char *__attribute__((cleanup(_free))) cacheline =
       malloc((uint64_t)L1CACHELINE * ncachelines);
-  int ntimes = times;
+  int64_t ntimes = times;
   while (ntimes > 0)
     for (i = 0; i < ncachelines; i++)
       atomic_xadd64((void *)(cacheline + IX(i, 0)), 1), ntimes--;
@@ -113,11 +113,12 @@ void *touchcache_infinite(__attribute__((unused)) void *_) {
   return NULL;
 }
 bool parse_int(struct argp_state *state, int *result, char *arg);
+bool parse_int64(struct argp_state *state, int64_t *result, char *arg);
 
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
   switch (key) {
   case 't':
-    if (!parse_int(state, &times, arg))
+    if (!parse_int64(state, &times, arg))
       return ARGP_ERR_UNKNOWN;
     break;
   case 'L':
@@ -152,6 +153,25 @@ bool parse_int(struct argp_state *state, int *result, char *_arg) {
   arg[j] = '\0';
   char *endp;
   int rv = strtol(arg, &endp, 10);
+  if (*arg == '\0' || *endp != '\0') {
+    argp_failure(state, 2, errno, "a number is expected, instead '%s'", arg);
+    return false;
+  }
+  *result = rv;
+  return true;
+}
+
+bool parse_int64(struct argp_state *state, int64_t *result, char *_arg) {
+  int i;
+  int j = 0;
+  char *__attribute__((cleanup(_free))) arg = malloc(strlen(_arg) + 1);
+  /* remove commas */
+  for (i = 0; i < (int)strlen(_arg); i++)
+    if (_arg[i] != ',')
+      arg[j++] = _arg[i];
+  arg[j] = '\0';
+  char *endp;
+  int64_t rv = strtol(arg, &endp, 10);
   if (*arg == '\0' || *endp != '\0') {
     argp_failure(state, 2, errno, "a number is expected, instead '%s'", arg);
     return false;
