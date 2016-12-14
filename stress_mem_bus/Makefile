@@ -7,4 +7,4 @@ cachemiss:
 
 .PHONY: clean
 clean:
-	rm cachemiss cachemiss.o
+	rm -f cachemiss
