@@ -7,7 +7,7 @@ highlight() {
 }
 runbackground() {
 	boldecho taskset 0xfffe ./cachemiss -t -1 -T $THREADS "$@"
-	taskset 0xfffe ./cachemiss -t -1 -T $TIMES "$@"
+	taskset 0xfffe ./cachemiss -t -1 -T $THREADS "$@"
 }
 TIMES=100,000,000
 THREADS=16
