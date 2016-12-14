@@ -9,7 +9,7 @@ runbackground() {
 	boldecho taskset 0xfffe ./cachemiss -t -1 -T $THREADS "$@"
 	taskset 0xfffe ./cachemiss -t -1 -T $THREADS "$@"
 }
-TIMES=100,000,000
+TIMES=1,000,000,000
 THREADS=16
 PERF="perf stat -e context-switches,cycles:k,instructions:k,cycles:u,instructions:u,cache-misses:u,LLC-loads:u,LLC-load-misses:u,LLC-store-misses:u,LLC-stores:u,LLC-loads:k,LLC-load-misses:k,LLC-store-misses:k,LLC-stores:k,L1-dcache-load-misses:u,L1-dcache-loads:u,branch-misses,branch-load-misses,branches,branch-loads"
 if [ -n "$PERFCMD" ]; then
