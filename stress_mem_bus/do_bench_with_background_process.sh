@@ -2,6 +2,8 @@
 
 source ../demo.sh
 
+[ -x cachemiss ] || make
+
 highlight() {
 	grep --color '^.*LLC.*miss.*$\|[^ ]*\s*insns per cycle\|$'
 }
