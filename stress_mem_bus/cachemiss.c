@@ -68,6 +68,7 @@ int main(int argc, char **argv) {
   f(NULL);
   for (i = 1; i < nthreads; i++)
     pthread_join(threads[i], NULL);
+  return 0;
 }
 
 #define IX(x, y) (x * L1CACHELINE + y)
