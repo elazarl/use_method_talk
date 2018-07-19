@@ -33,3 +33,6 @@ sleep 1
 boldecho "and run the exact same benchmark "
 runecho taskset 0x1 $PERF ./cachemiss -c 10 -t $TIMES |& highlight
 [ -n "$PERFCMD" ] && sudo perf report
+
+sed -n '0,/^$/p' /proc/cpuinfo
+sudo dmidecode -t processor
