@@ -437,3 +437,196 @@ Processor Information
 		64-bit capable
 
 ```
+
+Another example
+
+```
+➜  stress_mem_bus git:(master) ./do_bench_with_background_process.sh
+But wait! We might be innocent! Let's run again the base benchmark with -c 1
+taskset 0xfffe ./cachemiss -t -1 -T 16 -c 1
+Using 1 cachelines, touching memory -1 times L3 Cache size 4,194,000, 16 threads
+perf stat -e context-switches,cycles:k,instructions:k,cycles:u,instructions:u,cache-misses:u,LLC-loads:u,LLC-load-misses:u,LLC-store-misses:u,LLC-stores:u,LLC-loads:k,LLC-load-misses:k,LLC-store-misses:k,
+LLC-stores:k,L1-dcache-load-misses:u,L1-dcache-loads:u,branch-misses,branch-load-misses,branches,branch-loads ./cachemiss -c 10 -t 1,000,000,000
+Using 10 cachelines, touching memory 1,000,000,000 times L3 Cache size 4,194,000, 1 threads
+
+ Performance counter stats for './cachemiss -c 10 -t 1,000,000,000':
+
+               109 context-switches
+        17,519,453 cycles:k                  [22.32%]
+         6,448,593 instructions:k            #    0.00  insns per cycle         [27.84%]
+     7,951,076,299 cycles:u                  [27.84%]
+    10,456,203,374 instructions:u            #    2.62  insns per cycle         [27.67%]
+             1,090 cache-misses:u                                               [27.71%]
+             1,443 LLC-loads                                                    [27.59%]
+                18 LLC-load-misses           #    0.12% of all LL-cache hits    [28.21%]
+               115 LLC-store-misses                                             [11.35%]
+             1,482 LLC-stores                                                   [11.20%]
+            29,586 LLC-loads                                                    [11.32%]
+             1,070 LLC-load-misses           #    6.90% of all LL-cache hits    [11.30%]
+                63 LLC-store-misses                                             [11.15%]
+             7,970 LLC-stores                                                   [11.28%]
+       269,343,961 L1-dcache-load-misses     #    0.00% of all L1-dcache hits   [16.82%]
+   <not supported> L1-dcache-loads
+            19,773 branch-misses             #    0.00% of all branches         [22.34%]
+            20,066 branch-load-misses                                           [22.31%]
+     2,096,983,327 branches                                                     [22.28%]
+     2,095,675,920 branch-loads                                                 [22.22%]
+
+       2.775333378 seconds time elapsed
+
+NOTE: last LLC stats are for kernel
+./do_bench_with_background_process.sh: line 10: 36189 Terminated              taskset 0xfffe ./cachemiss -t -1 -T $THREADS "$@"
+
+Now, let's run in a different CPU a process that thrashes the cache
+taskset 0xfffe ./cachemiss -t -1 -T 16 -c 1,000 -A
+Using 1,000 cachelines, touching memory -1 times L3 Cache size 4,194,000, 16 threads
+and run the exact same benchmark
+taskset 0x1 perf stat -e context-switches,cycles:k,instructions:k,cycles:u,instructions:u,cache-misses:u,LLC-loads:u,LLC-load-misses:u,LLC-store-misses:u,LLC-stores:u,LLC-loads:k,LLC-load-misses:k,LLC-sto
+re-misses:k,LLC-stores:k,L1-dcache-load-misses:u,L1-dcache-loads:u,branch-misses,branch-load-misses,branches,branch-loads ./cachemiss -c 10 -t 1,000,000,000
+Using 10 cachelines, touching memory 1,000,000,000 times L3 Cache size 4,194,000, 1 threads
+
+ Performance counter stats for './cachemiss -c 10 -t 1,000,000,000':
+
+                49 context-switches
+        19,150,749 cycles:k                  [22.16%]
+         5,533,196 instructions:k            #    0.00  insns per cycle         [27.85%]
+     8,199,184,199 cycles:u                  [28.03%]
+    10,495,280,326 instructions:u            #    2.55  insns per cycle         [28.10%]
+             2,315 cache-misses:u                                               [28.34%]
+             5,533 LLC-loads                                                    [28.32%]
+             2,116 LLC-load-misses           #    5.71% of all LL-cache hits    [28.26%]
+               450 LLC-store-misses                                             [11.11%]
+            81,455 LLC-stores                                                   [11.12%]
+            68,572 LLC-loads                                                    [11.35%]
+             2,460 LLC-load-misses           #    6.64% of all LL-cache hits    [11.26%]
+                54 LLC-store-misses                                             [11.20%]
+            13,253 LLC-stores                                                   [11.07%]
+       294,869,274 L1-dcache-load-misses     #    0.00% of all L1-dcache hits   [16.71%]
+   <not supported> L1-dcache-loads
+            24,471 branch-misses             #    0.00% of all branches         [22.23%]
+            24,472 branch-load-misses                                           [22.29%]
+     2,079,565,743 branches                                                     [22.25%]
+     2,076,546,652 branch-loads                                                 [22.06%]
+
+       2.903305767 seconds time elapsed
+
+processor       : 0
+vendor_id       : GenuineIntel
+cpu family      : 6
+model           : 62
+model name      : Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz
+stepping        : 4
+microcode       : 0x428
+cpu MHz         : 2499.947
+cache size      : 25600 KB
+physical id     : 0
+siblings        : 20
+core id         : 0
+cpu cores       : 10
+apicid          : 0
+initial apicid  : 0
+fpu             : yes
+fpu_exception   : yes
+cpuid level     : 13
+wp              : yes
+flags           : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc arch_perfmon pebs bts re
+p_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic popcnt tsc_deadline_timer aes xsave avx f16c rd
+rand lahf_lm ida arat xsaveopt pln pts dtherm tpr_shadow vnmi flexpriority ept vpid fsgsbase smep erms
+bogomips        : 4999.89
+clflush size    : 64
+cache_alignment : 64
+address sizes   : 46 bits physical, 48 bits virtual
+power management:
+
+# dmidecode 2.12
+SMBIOS 2.7 present.
+
+Handle 0x0400, DMI type 4, 40 bytes
+Processor Information
+        Socket Designation: CPU1
+        Type: Central Processor
+        Family: Xeon
+        Manufacturer: Intel
+        ID: E4 06 03 00 FF FB EB BF
+        Signature: Type 0, Family 6, Model 62, Stepping 4
+        Flags:
+                FPU (Floating-point unit on-chip)
+                VME (Virtual mode extension)
+                DE (Debugging extension)
+                PSE (Page size extension)
+                TSC (Time stamp counter)
+                MSR (Model specific registers)
+                PAE (Physical address extension)
+                MCE (Machine check exception)
+                CX8 (CMPXCHG8 instruction supported)
+                APIC (On-chip APIC hardware supported)
+                SEP (Fast system call)
+                MTRR (Memory type range registers)
+                PGE (Page global enable)
+                MCA (Machine check architecture)
+                CMOV (Conditional move instruction supported)
+                PAT (Page attribute table)
+                PSE-36 (36-bit page size extension)
+                CLFSH (CLFLUSH instruction supported)
+                DS (Debug store)
+                ACPI (ACPI supported)
+                MMX (MMX technology supported)
+                FXSR (FXSAVE and FXSTOR instructions supported)
+                SSE (Streaming SIMD extensions)
+                SSE2 (Streaming SIMD extensions 2)
+                SS (Self-snoop)
+                HTT (Multi-threading)
+                TM (Thermal monitor supported)
+                PBE (Pending break enabled)
+        Version:       Intel(R) Xeon(R) CPU E5-2670 v2 @ 2.50GHz
+        Voltage: 1.2 V
+        External Clock: 6400 MHz
+        Max Speed: 3600 MHz
+        Current Speed: 2500 MHz
+        Status: Populated, Enabled
+        Upgrade: Socket LGA2011
+        L1 Cache Handle: 0x0700
+        L2 Cache Handle: 0x0701
+        L3 Cache Handle: 0x0702
+        Serial Number: Not Specified
+        Asset Tag: Not Specified
+        Part Number: Not Specified
+        Core Count: 10
+        Core Enabled: 10
+        Thread Count: 20
+        Characteristics:
+                64-bit capable
+                Multi-Core
+                Hardware Thread
+                Execute Protection
+                Enhanced Virtualization
+                Power/Performance Control
+
+Handle 0x0401, DMI type 4, 40 bytes
+Processor Information
+        Socket Designation: CPU2
+        Type: Central Processor
+        Family: Unknown
+        Manufacturer: Intel
+        ID: 00 00 00 00 00 00 00 00
+        Version: Not Specified
+        Voltage: 1.2 V
+        External Clock: Unknown
+        Max Speed: 3600 MHz
+        Current Speed: Unknown
+        Status: Unpopulated
+        Upgrade: Socket LGA2011
+        L1 Cache Handle: 0x0703
+        L2 Cache Handle: 0x0704
+        L3 Cache Handle: 0x0705
+        Serial Number: Not Specified
+        Asset Tag: Not Specified
+        Part Number: Not Specified
+        Characteristics:
+                64-bit capable
+                Multi-Core
+                Hardware Thread
+                Execute Protection
+                Enhanced Virtualization
+                Power/Performance Control
+```
