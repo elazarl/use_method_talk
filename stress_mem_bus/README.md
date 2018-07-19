@@ -304,3 +304,136 @@ memory address.
  | ret                                            |
  =------------------------------------------------=
 ```
+
+# Update: Architectures it happened on
+
+Here is an example output with CPU info
+
+```
+But wait! We might be innocent! Let's run again the base benchmark with -c 1
+taskset 0xfffe ./cachemiss -t -1 -T 16 -c 1
+Using 1 cachelines, touching memory -1 times L3 Cache size 4,194,000, 16 threads
+perf stat -e context-switches,cycles:k,instructions:k,cycles:u,instructions:u,cache-misses:u,LLC-loads:u,LLC-load-misses:u,LLC-store-misses:u,LLC-stores:u,LLC-loads:k,LLC-load-misses:k,LLC-store-misses:k,LLC-stores:k,L1-dcache-load-misses:u,L1-dcache-loads:u,branch-misses,branch-load-misses,branches,branch-loads ./cachemiss -c 10 -t 1,000,000,000
+Using 10 cachelines, touching memory 1,000,000,000 times L3 Cache size 4,194,000, 1 threads
+
+ Performance counter stats for './cachemiss -c 10 -t 1,000,000,000':
+
+               779      context-switches                                            
+        30,376,493      cycles:k                                                      (21.49%)
+         8,902,740      instructions:k            #    0.29  insns per cycle          (27.20%)
+     9,108,443,365      cycles:u                                                      (26.93%)
+     5,793,664,558      instructions:u            #    0.64  insns per cycle          (26.89%)
+             4,540      cache-misses:u                                                (27.11%)
+             6,740      LLC-loads                                                     (26.56%)
+             1,082      LLC-load-misses           #   16.05% of all LL-cache hits     (26.07%)
+               514      LLC-store-misses                                              (10.50%)
+             7,937      LLC-stores                                                    (10.63%)
+            86,815      LLC-loads                                                     (10.67%)
+            10,582      LLC-load-misses           #   12.19% of all LL-cache hits     (10.56%)
+             1,431      LLC-store-misses                                              (10.48%)
+            10,829      LLC-stores                                                    (10.68%)
+       364,086,818      L1-dcache-load-misses     #  15151344.90% of all L1-dcache hits    (15.92%)
+             2,403      L1-dcache-loads                                               (15.69%)
+            99,659      branch-misses             #    0.01% of all branches          (10.35%)
+           114,561      branch-load-misses                                            (10.71%)
+     1,178,683,400      branches                                                      (15.97%)
+     1,183,829,828      branch-loads                                                  (21.15%)
+
+       3.926921046 seconds time elapsed
+
+NOTE: last LLC stats are for kernel
+./do_bench_with_background_process.sh: line 10:  9298 Terminated              taskset 0xfffe ./cachemiss -t -1 -T $THREADS "$@"
+
+Now, let's run in a different CPU a process that thrashes the cache
+taskset 0xfffe ./cachemiss -t -1 -T 16 -c 1,000 -A
+Using 1,000 cachelines, touching memory -1 times L3 Cache size 4,194,000, 16 threads
+and run the exact same benchmark 
+taskset 0x1 perf stat -e context-switches,cycles:k,instructions:k,cycles:u,instructions:u,cache-misses:u,LLC-loads:u,LLC-load-misses:u,LLC-store-misses:u,LLC-stores:u,LLC-loads:k,LLC-load-misses:k,LLC-store-misses:k,LLC-stores:k,L1-dcache-load-misses:u,L1-dcache-loads:u,branch-misses,branch-load-misses,branches,branch-loads ./cachemiss -c 10 -t 1,000,000,000
+Using 10 cachelines, touching memory 1,000,000,000 times L3 Cache size 4,194,000, 1 threads
+
+ Performance counter stats for './cachemiss -c 10 -t 1,000,000,000':
+
+               666      context-switches                                            
+        29,144,298      cycles:k                                                      (20.50%)
+         8,094,386      instructions:k            #    0.28  insns per cycle          (25.94%)
+     8,366,756,226      cycles:u                                                      (26.02%)
+     5,896,569,104      instructions:u            #    0.70  insns per cycle          (25.98%)
+            25,381      cache-misses:u                                                (25.92%)
+            11,425      LLC-loads                                                     (26.56%)
+             3,615      LLC-load-misses           #   31.64% of all LL-cache hits     (26.47%)
+            19,821      LLC-store-misses                                              (10.93%)
+            32,976      LLC-stores                                                    (11.04%)
+           110,609      LLC-loads                                                     (11.06%)
+            19,012      LLC-load-misses           #   17.19% of all LL-cache hits     (10.52%)
+               931      LLC-store-misses                                              (10.64%)
+            16,118      LLC-stores                                                    (11.11%)
+       325,894,683      L1-dcache-load-misses     #  8116928.59% of all L1-dcache hits    (16.21%)
+             4,015      L1-dcache-loads                                               (15.86%)
+            59,982      branch-misses             #    0.01% of all branches          (10.65%)
+            69,266      branch-load-misses                                            (10.29%)
+     1,199,149,524      branches                                                      (15.50%)
+     1,200,763,042      branch-loads                                                  (20.62%)
+
+       3.020254079 seconds time elapsed
+
+# dmidecode 3.0
+Getting SMBIOS data from sysfs.
+SMBIOS 2.7 present.
+
+Handle 0x0042, DMI type 4, 42 bytes
+Processor Information
+	Socket Designation: SOCKET 0
+	Type: Central Processor
+	Family: Core i7
+	Manufacturer: Intel
+	ID: 51 06 04 00 FF FB EB BF
+	Signature: Type 0, Family 6, Model 69, Stepping 1
+	Flags:
+		FPU (Floating-point unit on-chip)
+		VME (Virtual mode extension)
+		DE (Debugging extension)
+		PSE (Page size extension)
+		TSC (Time stamp counter)
+		MSR (Model specific registers)
+		PAE (Physical address extension)
+		MCE (Machine check exception)
+		CX8 (CMPXCHG8 instruction supported)
+		APIC (On-chip APIC hardware supported)
+		SEP (Fast system call)
+		MTRR (Memory type range registers)
+		PGE (Page global enable)
+		MCA (Machine check architecture)
+		CMOV (Conditional move instruction supported)
+		PAT (Page attribute table)
+		PSE-36 (36-bit page size extension)
+		CLFSH (CLFLUSH instruction supported)
+		DS (Debug store)
+		ACPI (ACPI supported)
+		MMX (MMX technology supported)
+		FXSR (FXSAVE and FXSTOR instructions supported)
+		SSE (Streaming SIMD extensions)
+		SSE2 (Streaming SIMD extensions 2)
+		SS (Self-snoop)
+		HTT (Multi-threading)
+		TM (Thermal monitor supported)
+		PBE (Pending break enabled)
+	Version: Intel(R) Core(TM) i7-4600U CPU @ 2.10GHz
+	Voltage: 1.2 V
+	External Clock: 100 MHz
+	Max Speed: 2100 MHz
+	Current Speed: 2100 MHz
+	Status: Populated, Enabled
+	Upgrade: Socket rPGA988B
+	L1 Cache Handle: 0x0043
+	L2 Cache Handle: 0x0044
+	L3 Cache Handle: 0x0045
+	Serial Number: Not Specified
+	Asset Tag: Fill By OEM
+	Part Number: Fill By OEM
+	Core Count: 2
+	Core Enabled: 2
+	Thread Count: 4
+	Characteristics:
+		64-bit capable
+
+```
